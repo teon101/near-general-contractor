@@ -107,6 +107,8 @@ npm start -- --budget 1 --token NEAR
 ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet
 ```
 
+Wallet running low after several runs? `npm run topup -- 3` moves 3 test NEAR from the root account to the contractor (the agent refuses any budget the wallet can't cover).
+
 Receipts then include real transaction hashes with testnet explorer links. `PAYMENT_RAIL=usdc` pays with `ft_transfer` on the NEP-141 token set in `USDC_CONTRACT` and registers the payee's token storage first if needed (see `.env.example`).
 
 ## NEAR Intents: paying a worker in USDC from a NEAR budget

@@ -14,7 +14,8 @@
     "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "setup:testnet": "tsx scripts/setup-testnet.ts",
-    "dashboard": "tsx src/dashboard/server.ts"
+    "dashboard": "tsx src/dashboard/server.ts",
+    "topup": "tsx scripts/topup.ts"
   },
   "dependencies": {
     "near-api-js": "^5.1.1"
