@@ -113,7 +113,7 @@ Receipts then include real transaction hashes with testnet explorer links. `PAYM
 
 Some workers want to be paid in USDC (@chartsmith and @penpal). When the budget is in NEAR, the contractor settles those payments through the NEAR Intents 1Click API as an `EXACT_INPUT` swap: exactly the agreed NEAR goes in and the worker gets whatever USDC that buys. The spend guard therefore always accounts in NEAR and can't be thrown off by the rate.
 
-- **Testnet:** NEAR Intents has no testnet deployment. The contractor gets a **live dry-run quote** from 1Click (real price, nothing moves), pays the agreed NEAR on testnet, and the receipt records what Intents quoted. Example line: `NEAR Intents live quote: 0.397 NEAR -> 0.93 USDC`.
+- **Testnet:** NEAR Intents has no testnet deployment. The contractor gets a **live dry-run quote** from 1Click (real price, nothing moves), pays the agreed NEAR on testnet, and the receipt records what Intents quoted. Real example from a testnet run on 10 Nov 2026: `NEAR Intents live quote: 0.397 NEAR -> 1.410348 USDC ($1.41)`.
 - **Mainnet:** with `NEAR_NETWORK=mainnet ALLOW_MAINNET=1 INTENTS_EXECUTE=1`, it takes a live quote, wraps the NEAR, sends the wNEAR to the 1Click deposit address, submits the deposit and polls until `SUCCESS`. The worker then receives USDC on NEAR. This path is implemented but we have not run it with real funds.
 - Turn it off with `USE_INTENTS=0`. Optional `ONECLICK_API_KEY` is sent as `X-API-Key`.
 
