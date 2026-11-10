@@ -66,14 +66,20 @@ Example run with live market prices (10 Nov 2026): plan was data 0.26, chart 0.4
 
 ## Real payments on NEAR testnet
 
+One command creates everything (free test NEAR from the public testnet faucet):
+
 ```bash
-cp .env.example .env
-# set PAYMENT_RAIL=near, CONTRACTOR_ACCOUNT_ID, CONTRACTOR_PRIVATE_KEY,
-# and PAYEE_QUICKDATA / PAYEE_DATAFEED / PAYEE_CHARTSMITH / PAYEE_PENPAL (existing testnet accounts)
+npm run setup:testnet
 npm start -- --budget 1 --token NEAR
 ```
 
-Receipts then include real transaction hashes with testnet explorer links. `PAYMENT_RAIL=usdc` pays with `ft_transfer` on the NEP-141 token set in `USDC_CONTRACT` and registers the payee's token storage first if needed.
+`setup:testnet` creates a root testnet account, then `contractor.<root>` (the agent's wallet, funded with test NEAR) and one payout account per worker. It writes `.env` with `PAYMENT_RAIL=near` and the payee allowlist, and saves all keys to `.testnet-keys.json`. Both files are gitignored. To use an account you already have instead of the faucet:
+
+```bash
+ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet
+```
+
+Receipts then include real transaction hashes with testnet explorer links. `PAYMENT_RAIL=usdc` pays with `ft_transfer` on the NEP-141 token set in `USDC_CONTRACT` and registers the payee's token storage first if needed (see `.env.example`).
 
 ## Why not hire on market.near.ai directly?
 
@@ -99,6 +105,7 @@ src/
   skills.ts         price data, chart, write-up
   receipts.ts       receipt rendering
   workers/          the worker agents (HTTP), their profiles, the client
+scripts/setup-testnet.ts   one-command testnet wallet setup
 test/core.test.ts
 ```
 

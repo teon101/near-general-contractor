@@ -1,0 +1,128 @@
+// One-command NEAR testnet setup.
+//
+//   npm run setup:testnet
+//
+// 1. Creates a root testnet account through the public testnet faucet (free test NEAR).
+// 2. From it, creates sub-accounts:
+//      contractor.<root>   the agent's own wallet, funded with the test budget
+//      quickdata.<root>, datafeed.<root>, chartsmith.<root>, penpal.<root>   worker payout accounts
+// 3. Writes .env (PAYMENT_RAIL=near, contractor key, payee allowlist) and saves every key
+//    to .testnet-keys.json. Both files are gitignored. Testnet only: these coins have no value.
+//
+// Already have a funded testnet account? Use it as the root instead of the faucet:
+//   ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet
+
+import { existsSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { connect, keyStores, KeyPair, utils } from "near-api-js";
+
+const NETWORK = "testnet";
+const NODE_URL = process.env.NEAR_RPC_URL ?? "https://rpc.testnet.near.org";
+const FAUCETS = ["https://helper.nearprotocol.com/account", "https://helper.testnet.near.org/account"];
+const WORKERS = ["quickdata", "datafeed", "chartsmith", "penpal"];
+const WORKER_FUNDING = "0.05";
+const CONTRACTOR_TARGET = 3; // NEAR to give the contractor (budget for several demo runs + gas)
+
+if (existsSync(".env") && !process.argv.includes("--force")) {
+  console.error(".env already exists. Run with --force to replace it (the old keys are NOT recoverable unless saved).");
+  process.exit(1);
+}
+
+const keys: Record<string, { accountId: string; publicKey: string; privateKey: string }> = {};
+const saveKeys = () => writeFileSync(".testnet-keys.json", JSON.stringify(keys, null, 2), { mode: 0o600 });
+const keyStore = new keyStores.InMemoryKeyStore();
+
+async function createViaFaucet(accountId: string, kp: KeyPair) {
+  for (const url of FAUCETS) {
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ newAccountId: accountId, newAccountPublicKey: kp.getPublicKey().toString() }),
+      });
+      if (r.ok) return url;
+      console.log(`  faucet ${url} said ${r.status}: ${(await r.text()).slice(0, 160)}`);
+    } catch (e) {
+      console.log(`  faucet ${url} unreachable: ${(e as Error).message}`);
+    }
+  }
+  throw new Error(
+    "No faucet worked. Create a testnet account in a wallet (e.g. testnet.mynearwallet.com), fund it from a faucet, " +
+      "then run: ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet",
+  );
+}
+
+async function waitForAccount(near: Awaited<ReturnType<typeof connect>>, id: string) {
+  for (let i = 0; i < 20; i++) {
+    try { return await (await near.account(id)).getAccountBalance(); } catch { await new Promise((r) => setTimeout(r, 1500)); }
+  }
+  throw new Error(`account ${id} did not appear on testnet`);
+}
+
+const near = await connect({ networkId: NETWORK, nodeUrl: NODE_URL, keyStore });
+
+// 1. Root account
+let rootId = process.env.ROOT_ACCOUNT_ID;
+if (rootId) {
+  const k = process.env.ROOT_PRIVATE_KEY;
+  if (!k) throw new Error("ROOT_PRIVATE_KEY is required with ROOT_ACCOUNT_ID");
+  await keyStore.setKey(NETWORK, rootId, KeyPair.fromString(k as `ed25519:${string}`));
+  console.log(`using your account ${rootId} as root`);
+} else {
+  rootId = `gc-${randomBytes(4).toString("hex")}.testnet`;
+  const kp = KeyPair.fromRandom("ed25519");
+  keys.root = { accountId: rootId, publicKey: kp.getPublicKey().toString(), privateKey: kp.toString() };
+  saveKeys();
+  console.log(`creating ${rootId} via faucet...`);
+  await keyStore.setKey(NETWORK, rootId, kp);
+  const used = await createViaFaucet(rootId, kp);
+  console.log(`  created (faucet: ${used})`);
+}
+const rootBal = await waitForAccount(near, rootId);
+const rootAvail = Number(utils.format.formatNearAmount(rootBal.available, 4).replace(/,/g, ""));
+console.log(`root balance: ${rootAvail} NEAR`);
+
+const root = await near.account(rootId);
+const contractorFunding = Math.min(CONTRACTOR_TARGET, Math.floor((rootAvail - 0.5 - WORKERS.length * Number(WORKER_FUNDING)) * 100) / 100);
+if (contractorFunding < 1.2) throw new Error(`root only has ${rootAvail} NEAR; need at least ~2 NEAR to set up`);
+
+// 2. Sub-accounts
+async function sub(name: string, amount: string) {
+  const id = `${name}.${rootId}`;
+  const kp = KeyPair.fromRandom("ed25519");
+  keys[name] = { accountId: id, publicKey: kp.getPublicKey().toString(), privateKey: kp.toString() };
+  saveKeys(); // save the key BEFORE the account exists so it can't be lost
+  await root.createAccount(id, kp.getPublicKey(), BigInt(utils.format.parseNearAmount(amount)!));
+  console.log(`  created ${id} with ${amount} NEAR`);
+  return id;
+}
+
+console.log("creating accounts...");
+const contractorId = await sub("contractor", contractorFunding.toFixed(2));
+const payees: Record<string, string> = {};
+for (const w of WORKERS) payees[w] = await sub(w, WORKER_FUNDING);
+
+// 3. .env
+const env = `# Generated by npm run setup:testnet on ${new Date().toISOString()}. TESTNET ONLY. Never commit.
+PAYMENT_RAIL=near
+NEAR_NETWORK=testnet
+CONTRACTOR_ACCOUNT_ID=${contractorId}
+CONTRACTOR_PRIVATE_KEY=${keys.contractor.privateKey}
+${WORKERS.map((w) => `PAYEE_${w.toUpperCase()}=${payees[w]}`).join("\n")}
+CONTINGENCY_SHARE=0.1
+WALK_AWAY_MULTIPLIER=1.2
+MAX_SINGLE_PAYMENT_SHARE=0.5
+USE_LIVE_MARKET=1
+ALLOW_MAINNET=0
+`;
+writeFileSync(".env", env, { mode: 0o600 });
+
+console.log(`
+done.
+  contractor wallet: ${contractorId} (${contractorFunding.toFixed(2)} NEAR)
+  workers get paid at: ${Object.values(payees).join(", ")}
+  keys saved to .testnet-keys.json, settings to .env (both gitignored)
+
+now run:  npm start -- --budget 1 --token NEAR
+watch it: https://testnet.nearblocks.io/address/${contractorId}
+`);
