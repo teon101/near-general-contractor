@@ -10,8 +10,17 @@ export type Msg = { role: "system" | "user" | "assistant"; content: string };
 const PREFERRED = ["deepseek-ai/DeepSeek-V4-Flash", "z-ai/glm-5.2", "deepseek-ai/DeepSeek-V3.1", "Qwen/Qwen3-30B-A3B-Instruct-2507"];
 
 let resolvedModel: string | null = null;
+/** Set when NEAR AI Cloud refuses the account (bad key, no credits). Stops further calls this run. */
+let unavailable: string | null = null;
 
-export const llmEnabled = () => Boolean(config.llmApiKey);
+export const llmEnabled = () => Boolean(config.llmApiKey) && !unavailable;
+export const llmUnavailableReason = () => unavailable;
+
+function explain(status: number, text: string) {
+  if (status === 401 || status === 403) return `NEAR AI Cloud rejected the API key (${status})`;
+  if (status === 402) return `NEAR AI Cloud account has no credits or spending limit (402)`;
+  return `NEAR AI Cloud error ${status}: ${text.slice(0, 160)}`;
+}
 
 async function req(path: string, init?: RequestInit, timeoutMs = 90_000): Promise<any> {
   const ctl = new AbortController();
@@ -23,7 +32,11 @@ async function req(path: string, init?: RequestInit, timeoutMs = 90_000): Promis
       headers: { "content-type": "application/json", authorization: `Bearer ${config.llmApiKey}`, ...(init?.headers ?? {}) },
     });
     const text = await r.text();
-    if (!r.ok) throw new Error(`NEAR AI Cloud ${path} -> ${r.status}: ${text.slice(0, 200)}`);
+    if (!r.ok) {
+      const msg = explain(r.status, text);
+      if ([401, 402, 403].includes(r.status)) unavailable = msg;
+      throw new Error(msg);
+    }
     return JSON.parse(text);
   } finally {
     clearTimeout(t);

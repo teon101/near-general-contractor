@@ -136,7 +136,7 @@ export async function makePlan(task: string, budget: number, token: Token, worke
       drafted = await aiPlan(task, budget, token, workers);
       brain = `NEAR AI Cloud (${await model()})`;
     } catch (e) {
-      brain = `built-in rules (AI brain failed: ${(e as Error).message.slice(0, 120)})`;
+      brain = `built-in rules (AI brain unavailable: ${(e as Error).message.slice(0, 120)})`;
       log(`  AI planner failed, using rules: ${(e as Error).message}`);
     }
   }
