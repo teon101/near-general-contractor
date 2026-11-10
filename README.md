@@ -44,9 +44,27 @@ The planned spend for each part comes from live Agent Market pricing, so exact n
 
 Example run with live market prices (10 Nov 2026): plan was data 0.26, chart 0.40, write-up 0.24. Chart counter at 0.397 was accepted. Spent 0.577 of a 1.00 budget. With the offline fallback weights, the chart worker rejects the counter and settles at 0.34, and the run spends 0.52.
 
+## The AI brain (NEAR AI Cloud)
+
+With `LLM_API_KEY` set (from cloud.near.ai), the agent uses NEAR AI Cloud's TEE-backed inference for its judgment calls:
+
+- **Planning:** splits any task into parts, picks the asset, and writes the acceptance check for open-ended parts. Example: "brief on NEAR with a chart, plus a 5-tweet thread" becomes data (buy), chart (buy), brief (buy), thread (in-house).
+- **Counter-offers:** writes the counter message to the worker.
+- **In-house work:** does `general` parts nobody is hired for (threads, outlines, plans, copy).
+- **Checking:** judges general work against its acceptance check.
+
+The AI is advisory, and code has the final say on anything involving money or acceptance:
+
+- The plan is validated: only known skills, at most 6 parts, data before anything that needs it. Bad plans are sent back once, then the agent falls back to built-in rules.
+- **Prices are never set by the AI.** Planned spend comes from market prices, and the counter price comes from the negotiation policy. The AI only explains the counter, and its message is thrown out if it doesn't state the exact counter price.
+- Data, chart and brief are checked by deterministic code. Only open-ended general work uses the AI judge.
+- The AI never sees a key and has no way to call the payment rail.
+
+The model is picked from the live NEAR AI Cloud catalog unless `LLM_MODEL` is set. Without a key everything still runs, using rules and templates.
+
 ## The task loop
 
-1. **Plan.** Split the task into parts (data, chart, write-up). For each part decide do vs. buy, set a planned spend, and write the acceptance check. 10% of the budget is held back as contingency. Planned spend is split using reference prices from market.near.ai (see below).
+1. **Plan.** The AI brain (or the built-in rules) splits the task into parts. For each part decide do vs. buy, set a planned spend, and write the acceptance check. 10% of the budget is held back as contingency. Planned spend is split using reference prices from market.near.ai (see below).
 2. **Source.** Ask every worker with the right skill for a quote. Try the cheapest first.
 3. **Negotiate.** Quote at or under plan: accept. Over plan: counter once at the planned price and say why. If the worker's answer is at or under `min(planned x 1.2, money left)`, accept. Otherwise walk away and try the next worker.
 4. **Commit.** The spend guard reserves the agreed price. It refuses if the payee isn't allowlisted, the amount is over the single-payment cap, or it would break the budget.
@@ -96,7 +114,9 @@ So the contractor uses the Agent Market **read-only, for reference prices** when
 src/
   cli.ts            entry point
   contractor.ts     the task loop
-  planner.ts        split task, do vs. buy, planned spend, acceptance checks
+  planner.ts        split task (AI or rules), do vs. buy, planned spend, acceptance checks
+  brain.ts          AI counter wording, in-house general work, AI judge
+  llm.ts            NEAR AI Cloud client
   negotiate.ts      one-counter policy
   guard.ts          spend guard (the only path to money)
   payments.ts       simulate / NEAR / USDC rails (only file that reads a key)
@@ -106,7 +126,8 @@ src/
   receipts.ts       receipt rendering
   workers/          the worker agents (HTTP), their profiles, the client
 scripts/setup-testnet.ts   one-command testnet wallet setup
-test/core.test.ts
+test/core.test.ts  guard, negotiation, checks, end-to-end budget
+test/brain.test.ts AI path against a fake NEAR AI Cloud server
 ```
 
 ## Current status and limits
@@ -114,7 +135,7 @@ test/core.test.ts
 - Simulated mode is tested end to end (`npm test`).
 - The NEAR rail is verified on testnet (10 Nov 2026, contractor `contractor.gc-1f89ed5d.testnet`): 0.18 NEAR to datafeed ([En7jAGFv...](https://testnet.nearblocks.io/txns/En7jAGFvtcGEekp7anWyEDS7bQa9JKJc4Ss9nQYK8cr2)) and 0.397 NEAR to chartsmith ([bABKo7dJ...](https://testnet.nearblocks.io/txns/bABKo7dJX6Sfr7n1swt3p7AYNL7PHV7jLuLVK68sJQj)). quickdata (failed check) and penpal (walked away) received nothing.
 - The USDC (NEP-141) rail is implemented but has not been run against testnet yet.
-- The planner maps tasks onto three skills (data, chart, write-up). It's a general loop with a small skill catalogue, not an open-ended task solver.
+- Hirable worker skills are data, chart and write-up. Any other part the AI plans is done in-house by the contractor (needs `LLM_API_KEY`), so a task outside crypto market work ends up mostly in-house.
 - Payment is released after the check passes, directly from the contractor wallet. There is no on-chain escrow contract in this version.
 - Price data comes from CoinGecko; offline runs use clearly labelled sample data.
 

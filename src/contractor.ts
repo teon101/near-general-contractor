@@ -17,6 +17,7 @@ import { GuardError, SpendGuard } from "./guard.js";
 import { negotiate } from "./negotiate.js";
 import type { PaymentRail } from "./payments.js";
 import { assetFromTask, canDoInHouse, makePlan } from "./planner.js";
+import { counterMessage, doGeneralWork, judgeGeneral } from "./brain.js";
 import { receiptsMarkdown } from "./receipts.js";
 import { writeBrief } from "./skills.js";
 import type { Plan, ReceiptLine, Subtask, Token, WorkerInfo } from "./types.js";
@@ -52,23 +53,39 @@ export async function runContractor(opts: {
   const guard = new SpendGuard(budget, token, new Set(workers.map((w) => w.payee)), config.maxSinglePaymentShare);
 
   // 1. Plan
-  const plan = await makePlan(task, budget, token, workers);
+  const plan = await makePlan(task, budget, token, workers, log);
   log(`\nPLAN  budget ${budget} ${token}, holding back ${plan.contingency} as contingency`);
+  log(`      brain: ${plan.brain}`);
   log(`      planning prices from: ${plan.priceSource}`);
   for (const s of plan.subtasks) {
-    log(`      ${s.id} ${s.title.padEnd(32)} ${s.mode === "buy" ? `BUY  planned ${s.plannedSpend} ${token}` : "SELF"}`);
+    log(`      ${s.id} ${s.title.slice(0, 40).padEnd(40)} ${s.mode === "buy" ? `BUY  planned ${s.plannedSpend} ${token}` : "SELF"}`);
+    if (s.why) log(`         why:   ${s.why}`);
     log(`         check: ${s.acceptance}`);
   }
 
   const receipts: ReceiptLine[] = [];
   const outputs: Partial<Record<Subtask["skill"], unknown>> = {};
-  const asset = assetFromTask(task);
+  const generalOut: { title: string; markdown: string }[] = [];
+  const asset = plan.asset ?? assetFromTask(task);
+  const contextSoFar = () => [
+    outputs.data ? `Price data (${(outputs.data as DataOutput).asset}, usd): ${(outputs.data as DataOutput).points.map((p) => p.price).join(", ")}` : "",
+    outputs.writeup ? (outputs.writeup as { markdown: string }).markdown : "",
+    ...generalOut.map((g) => g.markdown),
+  ].filter(Boolean).join("\n\n");
   const now = () => new Date().toISOString();
 
   const inputFor = (s: Subtask) => (s.skill === "data" ? { asset } : { data: outputs.data });
   const briefFor = (s: Subtask) => `${s.title} for: ${task}. Acceptance: ${s.acceptance}`;
 
   const doInHouse = async (s: Subtask, reason: string) => {
+    if (s.skill === "general") {
+      const { markdown, by } = await doGeneralWork(task, s, contextSoFar());
+      const check = await judgeGeneral(s, markdown);
+      if (check.passed) generalOut.push({ title: s.title, markdown });
+      receipts.push(line(s, { what: `${s.title} (in-house, ${by})`, from: "contractor (self)", outcome: "done_in_house", checkPassed: check.passed, checkNotes: [reason, ...check.reasons] }));
+      log(`  -> did it in-house (${by}). check: ${check.passed ? "PASS" : "FAIL"} (${check.reasons.join("; ")})`);
+      return;
+    }
     const data = (outputs.data as DataOutput) ?? null;
     if (s.skill !== "writeup" || !data) {
       receipts.push(line(s, { what: s.title, from: "nobody", outcome: "skipped", checkNotes: [reason] }));
@@ -91,12 +108,12 @@ export async function runContractor(opts: {
 
   for (const s of plan.subtasks) {
     log(`\n[${s.id}] ${s.title}`);
-    if (s.skill !== "data" && !outputs.data) {
+    if ((s.skill === "chart" || s.skill === "writeup") && !outputs.data) {
       receipts.push(line(s, { outcome: "skipped", checkNotes: ["no valid data to build on"] }));
       log("  -> skipped: no valid data to build on");
       continue;
     }
-    if (s.mode === "self") { await doInHouse(s, "no worker offers this"); continue; }
+    if (s.mode === "self") { await doInHouse(s, "planned as in-house work"); continue; }
 
     // 2. Source
     const candidates = workers.filter((w) => w.skill === s.skill);
@@ -113,6 +130,10 @@ export async function runContractor(opts: {
         walkAwayMultiplier: config.walkAwayMultiplier,
         marketNote: plan.priceSource.startsWith("market") ? "current Agent Market prices for this kind of work" : "my price plan for this job",
         sendCounter: (price, reasoning) => { countered = price; return sendCounter(w, price, reasoning); },
+        writeReasoning: (counter, fallback) => counterMessage({
+          quote: q.price, planned: s.plannedSpend, counter, token, partTitle: s.title, budgetLeft: guard.available(), fallback,
+          marketNote: plan.priceSource.startsWith("market") ? "current Agent Market prices for this kind of work" : "my price plan for this job",
+        }),
       });
       outcome.log.forEach((m) => log(`  ${m}`));
       if (outcome.kind === "walked_away") {
@@ -182,6 +203,7 @@ export async function runContractor(opts: {
     writeFileSync(join(outDir, "chart.svg"), (outputs.chart as { svg: string }).svg);
     parts.push("\n![price chart](chart.svg)\n");
   }
+  for (const g of generalOut) parts.push(g.markdown);
   if (outputs.data) writeFileSync(join(outDir, "data.json"), JSON.stringify(outputs.data, null, 2));
   writeFileSync(join(outDir, "report.md"), parts.join("\n") || "_No deliverable was completed._\n");
   writeFileSync(join(outDir, "plan.json"), JSON.stringify(plan, null, 2));

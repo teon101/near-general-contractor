@@ -42,7 +42,7 @@ export const config = {
   /** Optional: NEAR AI Cloud (OpenAI-compatible) for in-house writing and counter wording. */
   llmBaseUrl: process.env.LLM_BASE_URL ?? "https://cloud-api.near.ai/v1",
   llmApiKey: process.env.LLM_API_KEY ?? "",
-  llmModel: process.env.LLM_MODEL ?? "deepseek-ai/DeepSeek-V3.1",
+  llmModel: process.env.LLM_MODEL ?? "deepseek-ai/DeepSeek-V4-Flash",
 
   outDir: process.env.OUT_DIR ?? "out",
 };

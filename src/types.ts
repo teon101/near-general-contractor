@@ -1,6 +1,6 @@
 // Shared types for the contractor, the workers and the receipts.
 
-export type Skill = "data" | "chart" | "writeup";
+export type Skill = "data" | "chart" | "writeup" | "general";
 
 export type Token = "NEAR" | "USDC";
 
@@ -17,6 +17,8 @@ export interface Subtask {
   acceptance: string;
   /** Market category used to look up reference prices. */
   marketCategory: string;
+  /** Why the planner included this part (from the AI brain, or the rule that fired). */
+  why: string;
 }
 
 export interface Plan {
@@ -26,6 +28,10 @@ export interface Plan {
   contingency: number;
   subtasks: Subtask[];
   priceSource: string;
+  /** Which brain made the plan: an NEAR AI Cloud model, or the built-in rules. */
+  brain: string;
+  /** CoinGecko id of the asset the task is about, if any. */
+  asset: string | null;
 }
 
 /** A worker agent the contractor can hire. */

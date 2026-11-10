@@ -65,5 +65,6 @@ export function runCheck(skill: Skill, out: unknown, data: DataOutput | null): C
     case "data": return checkData(out);
     case "chart": return checkChart(out, data);
     case "writeup": return checkWriteup(out, data);
+    case "general": return { passed: false, reasons: ["general work is checked by the AI judge (brain.ts)"] };
   }
 }

@@ -1,7 +1,7 @@
 // The actual work: fetching prices, drawing a chart, writing a brief.
 // Worker agents use these to produce deliveries; the contractor uses writeBrief for in-house work.
 
-import { config } from "./config.js";
+import { chat, llmEnabled, model } from "./llm.js";
 import type { DataOutput } from "./checks.js";
 
 export async function fetchPrices(asset: string): Promise<DataOutput> {
@@ -85,25 +85,16 @@ This brief covers seven days of daily closes only. It does not account for volum
 `;
 }
 
-/** In-house writing. Uses NEAR AI Cloud if an API key is set, otherwise the template. */
+/** In-house writing. Uses the AI brain (NEAR AI Cloud) if a key is set, otherwise the template. */
 export async function writeBrief(task: string, data: DataOutput): Promise<{ markdown: string; by: string }> {
-  if (!config.llmApiKey) return { markdown: writeBriefTemplate(task, data), by: "template" };
+  if (!llmEnabled()) return { markdown: writeBriefTemplate(task, data), by: "template" };
   const s = stats(data);
   try {
-    const r = await fetch(`${config.llmBaseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${config.llmApiKey}` },
-      body: JSON.stringify({
-        model: config.llmModel,
-        messages: [
-          { role: "system", content: "You write short, factual crypto market briefs in markdown. No hype. Start with a '# ' title. 150-250 words." },
-          { role: "user", content: `Task: ${task}\nAsset: ${data.asset}\nDaily closes (usd): ${data.points.map((p) => p.price).join(", ")}\nLatest price: $${s.last.toFixed(4)} (quote this exact figure)\nSource: ${data.source}` },
-        ],
-      }),
-    });
-    const j: any = await r.json();
-    const md: string = j?.choices?.[0]?.message?.content ?? "";
-    if (md.length > 200) return { markdown: md, by: `LLM (${config.llmModel})` };
+    const md = await chat([
+      { role: "system", content: "You write short, factual crypto market briefs in markdown. No hype, not investment advice. Start with a '# ' title. 150-250 words." },
+      { role: "user", content: `Task: ${task}\nAsset: ${data.asset}\nDaily closes (usd): ${data.points.map((p) => p.price).join(", ")}\nLatest price: $${s.last.toFixed(4)} (quote this exact figure)\nSource: ${data.source}` },
+    ], { maxTokens: 800 });
+    if (md.length > 200) return { markdown: md, by: `AI (${await model()})` };
   } catch { /* fall through */ }
-  return { markdown: writeBriefTemplate(task, data), by: "template (LLM call failed)" };
+  return { markdown: writeBriefTemplate(task, data), by: "template (AI call failed)" };
 }
