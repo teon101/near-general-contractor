@@ -111,7 +111,9 @@ test/core.test.ts
 
 ## Current status and limits
 
-- Simulated mode is tested end to end (`npm test`). The testnet NEAR and USDC rails are implemented with near-api-js but have not yet been run against testnet by us at the time of writing.
+- Simulated mode is tested end to end (`npm test`).
+- The NEAR rail is verified on testnet (10 Nov 2026, contractor `contractor.gc-1f89ed5d.testnet`): 0.18 NEAR to datafeed ([En7jAGFv...](https://testnet.nearblocks.io/txns/En7jAGFvtcGEekp7anWyEDS7bQa9JKJc4Ss9nQYK8cr2)) and 0.397 NEAR to chartsmith ([bABKo7dJ...](https://testnet.nearblocks.io/txns/bABKo7dJX6Sfr7n1swt3p7AYNL7PHV7jLuLVK68sJQj)). quickdata (failed check) and penpal (walked away) received nothing.
+- The USDC (NEP-141) rail is implemented but has not been run against testnet yet.
 - The planner maps tasks onto three skills (data, chart, write-up). It's a general loop with a small skill catalogue, not an open-ended task solver.
 - Payment is released after the check passes, directly from the contractor wallet. There is no on-chain escrow contract in this version.
 - Price data comes from CoinGecko; offline runs use clearly labelled sample data.
