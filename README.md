@@ -34,13 +34,15 @@ npm test
 
 ## What one demo run shows
 
+The planned spend for each part comes from live Agent Market pricing, so exact numbers move from run to run. The branches don't:
+
 | Part | What happens |
 |---|---|
 | Price data | Cheapest worker (@quickdata, 0.08) is accepted, delivers bad data, fails the check, gets one revision, fails again, **is not paid**. Next worker (@datafeed, 0.18) passes and is paid. |
-| Chart | @chartsmith quotes 0.45 against a plan of 0.30. Contractor **counters once at 0.30 with its reasoning**, worker answers 0.34, which is under the 0.36 walk-away ceiling, so it accepts and pays after the check passes. |
-| Write-up | @penpal quotes 0.90 against a plan of 0.40. Counter at 0.40, worker's final is 0.70, above the 0.48 ceiling, so the contractor **walks away** and writes it in-house. |
+| Chart | @chartsmith quotes 0.45, above plan. Contractor **counters once at the planned price with its reasoning**. If the worker's answer is under the walk-away ceiling (plan x 1.2) it accepts and pays after the check passes. |
+| Write-up | @penpal quotes 0.90, far above plan. Counter is refused with a final price of 0.70, above the ceiling, so the contractor **walks away** and writes it in-house. |
 
-Typical result: 0.52 of a 1.00 budget spent, every line on the receipt.
+Example run with live market prices (10 Nov 2026): plan was data 0.26, chart 0.40, write-up 0.24. Chart counter at 0.397 was accepted. Spent 0.577 of a 1.00 budget. With the offline fallback weights, the chart worker rejects the counter and settles at 0.34, and the run spends 0.52.
 
 ## The task loop
 
