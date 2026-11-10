@@ -10,7 +10,7 @@ export function receiptsMarkdown(runId: string, plan: Plan, lines: ReceiptLine[]
     `| ${l.subtask} | ${l.from} | ${money(l.quoted, t)} | ${money(l.countered, t)} | ${money(l.agreed, t)} | ${money(l.paid, t)} | ${l.checkPassed === null ? "-" : l.checkPassed ? "PASS" : "FAIL"} | ${l.outcome.replace(/_/g, " ")} | ${l.explorerUrl ? `[tx](${l.explorerUrl})` : l.txHash ?? "-"} |`,
   );
   const details = lines.map((l, i) =>
-    `### ${i + 1}. ${l.subtask} (${l.from})\n\n- What: ${l.what}\n- Payee: ${l.payee ?? "-"}\n- Outcome: ${l.outcome.replace(/_/g, " ")}\n- Check: ${l.checkNotes.join("; ") || "-"}\n${l.negotiation.length ? `- Negotiation:\n${l.negotiation.map((n) => `  - ${n}`).join("\n")}\n` : ""}- Time: ${l.at}\n`,
+    `### ${i + 1}. ${l.subtask} (${l.from})\n\n- What: ${l.what}\n- Payee: ${l.payee ?? "-"}\n- Outcome: ${l.outcome.replace(/_/g, " ")}\n- Check: ${l.checkNotes.join("; ") || "-"}\n${l.settlement ? `- Settlement: ${l.settlement}\n` : ""}${l.negotiation.length ? `- Negotiation:\n${l.negotiation.map((n) => `  - ${n}`).join("\n")}\n` : ""}- Time: ${l.at}\n`,
   );
   return `# Receipts for run ${runId}
 

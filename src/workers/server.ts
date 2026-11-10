@@ -104,7 +104,7 @@ export function startWorker(p: WorkerProfile, port: number): Promise<Server> {
     };
     try {
       if (req.method === "GET" && req.url === "/info") {
-        return send(200, { handle: p.handle, skill: p.skill, rating: p.rating, payee: payeeFor(p.handle) });
+        return send(200, { handle: p.handle, skill: p.skill, rating: p.rating, payee: payeeFor(p.handle), payIn: p.payIn ?? null });
       }
       if (req.method === "POST" && req.url === "/quote") {
         const { brief } = await readJson(req);
@@ -136,7 +136,7 @@ export async function startAllWorkers(basePort = config.workersBasePort): Promis
   for (const [i, p] of PROFILES.entries()) {
     const port = basePort + i;
     servers.push(await startWorker(p, port));
-    workers.push({ handle: p.handle, skill: p.skill, url: `http://127.0.0.1:${port}`, payee: payeeFor(p.handle), rating: p.rating });
+    workers.push({ handle: p.handle, skill: p.skill, url: `http://127.0.0.1:${port}`, payee: payeeFor(p.handle), rating: p.rating, payIn: p.payIn });
   }
   return { workers, stop: () => servers.forEach((s) => s.close()) };
 }

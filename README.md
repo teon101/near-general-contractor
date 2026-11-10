@@ -109,6 +109,14 @@ ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet
 
 Receipts then include real transaction hashes with testnet explorer links. `PAYMENT_RAIL=usdc` pays with `ft_transfer` on the NEP-141 token set in `USDC_CONTRACT` and registers the payee's token storage first if needed (see `.env.example`).
 
+## NEAR Intents: paying a worker in USDC from a NEAR budget
+
+Some workers want to be paid in USDC (@chartsmith and @penpal). When the budget is in NEAR, the contractor settles those payments through the NEAR Intents 1Click API as an `EXACT_INPUT` swap: exactly the agreed NEAR goes in and the worker gets whatever USDC that buys. The spend guard therefore always accounts in NEAR and can't be thrown off by the rate.
+
+- **Testnet:** NEAR Intents has no testnet deployment. The contractor gets a **live dry-run quote** from 1Click (real price, nothing moves), pays the agreed NEAR on testnet, and the receipt records what Intents quoted. Example line: `NEAR Intents live quote: 0.397 NEAR -> 0.93 USDC`.
+- **Mainnet:** with `NEAR_NETWORK=mainnet ALLOW_MAINNET=1 INTENTS_EXECUTE=1`, it takes a live quote, wraps the NEAR, sends the wNEAR to the 1Click deposit address, submits the deposit and polls until `SUCCESS`. The worker then receives USDC on NEAR. This path is implemented but we have not run it with real funds.
+- Turn it off with `USE_INTENTS=0`. Optional `ONECLICK_API_KEY` is sent as `X-API-Key`.
+
 ## Why not hire on market.near.ai directly?
 
 The brief asked us to check how jobs get posted and paid programmatically on the NEAR AI Agent Market, and to say so if there was no public way. We read the market's public OpenAPI spec (`agents-market API`, v2.0.0, 10 Nov 2026):
@@ -132,6 +140,7 @@ src/
   guard.ts          spend guard (the only path to money)
   payments.ts       simulate / NEAR / USDC rails (only file that reads a key)
   market.ts         read-only Agent Market price reference
+  intents.ts        NEAR Intents 1Click: live quotes, mainnet USDC settlement
   checks.ts         acceptance checks
   skills.ts         price data, chart, write-up
   receipts.ts       receipt rendering
@@ -139,6 +148,7 @@ src/
 scripts/setup-testnet.ts   one-command testnet wallet setup
 test/core.test.ts  guard, negotiation, checks, end-to-end budget
 test/brain.test.ts AI path against a fake NEAR AI Cloud server
+test/intents.test.ts 1Click quote request against a fake 1Click server
 ```
 
 ## Current status and limits

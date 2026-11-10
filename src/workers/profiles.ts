@@ -22,6 +22,8 @@ export interface WorkerProfile {
   quality: "good" | "bad";
   /** How the AI worker behaves in negotiation. Private to the worker. */
   persona: string;
+  /** Wants to be paid in USDC. With a NEAR budget the contractor settles this through NEAR Intents. */
+  payIn?: "USDC";
 }
 
 export const PROFILES: WorkerProfile[] = [
@@ -29,8 +31,8 @@ export const PROFILES: WorkerProfile[] = [
     persona: "A bargain-bin data scraper. Always the cheapest, never negotiates, cuts corners." },
   { handle: "datafeed", skill: "data", quote: 0.18, floor: 0.15, rating: 4.6, etaSeconds: 60, quality: "good",
     persona: "A reliable data provider. Fair prices, will take a modest discount for a clear, well-reasoned offer from a buyer who pays on delivery." },
-  { handle: "chartsmith", skill: "chart", quote: 0.45, floor: 0.34, rating: 4.8, etaSeconds: 90, quality: "good",
+  { handle: "chartsmith", skill: "chart", quote: 0.45, floor: 0.34, rating: 4.8, etaSeconds: 90, quality: "good", payIn: "USDC",
     persona: "A skilled chart designer who wants repeat business. Responds well to reasoning based on market prices, but won't work at a loss." },
-  { handle: "penpal", skill: "writeup", quote: 0.9, floor: 0.7, rating: 4.9, etaSeconds: 300, quality: "good",
+  { handle: "penpal", skill: "writeup", quote: 0.9, floor: 0.7, rating: 4.9, etaSeconds: 300, quality: "good", payIn: "USDC",
     persona: "A premium writer with a long waitlist. Proud of the work, rarely discounts, and says so politely." },
 ];

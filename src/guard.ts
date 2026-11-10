@@ -7,7 +7,7 @@
 //   4. a payment must match a commitment made at agreement time, and can't exceed it
 //   5. a commitment can only be paid once
 
-import type { PaymentResult, Token } from "./types.js";
+import type { PayOptions, PaymentResult, Token } from "./types.js";
 import type { PaymentRail } from "./payments.js";
 
 const SCALE = 1_000_000; // work in micro-units so 0.1 + 0.2 never drifts
@@ -79,7 +79,7 @@ export class SpendGuard {
   }
 
   /** Pay a commitment. The only path to the payment rail in the whole codebase. */
-  async pay(commitmentId: string, amount: number, rail: PaymentRail, memo: string): Promise<PaymentResult> {
+  async pay(commitmentId: string, amount: number, rail: PaymentRail, memo: string, opts?: PayOptions): Promise<PaymentResult> {
     const c = this.commitments.get(commitmentId);
     if (!c || c.state !== "open") throw new GuardError(`no open commitment ${commitmentId}`);
     const m = toMicro(amount);
@@ -88,7 +88,7 @@ export class SpendGuard {
     // Mark paid BEFORE sending so a retry can never double-pay. If the send fails we restore it.
     c.state = "paid";
     try {
-      const res = await rail.pay(c.payee, fromMicro(m), memo);
+      const res = await rail.pay(c.payee, fromMicro(m), memo, opts);
       this.spentMicro += m;
       return res;
     } catch (e) {

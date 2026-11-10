@@ -42,6 +42,8 @@ export interface WorkerInfo {
   /** Where payments go. Only these accounts can ever be paid (payee allowlist). */
   payee: string;
   rating: number;
+  /** Asset the worker wants to be paid in. Default: the budget token. */
+  payIn?: "USDC";
 }
 
 export interface Quote {
@@ -81,6 +83,13 @@ export interface PaymentResult {
   txHash: string;
   rail: string;
   explorerUrl?: string;
+  /** How the payee was settled, if not plain transfer (e.g. NEAR Intents to USDC). */
+  settlement?: string;
+}
+
+export interface PayOptions {
+  /** The payee wants to receive this asset. With a NEAR budget, USDC is settled via NEAR Intents. */
+  settleIn?: "USDC";
 }
 
 /** One line on the receipt: one attempt to get one part of the task done. */
@@ -101,5 +110,6 @@ export interface ReceiptLine {
   outcome: "paid" | "not_paid_failed_check" | "walked_away" | "done_in_house" | "skipped";
   txHash: string | null;
   explorerUrl: string | null;
+  settlement: string | null;
   at: string;
 }

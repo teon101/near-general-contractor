@@ -4,14 +4,15 @@
 
 import { randomBytes } from "node:crypto";
 import { config } from "./config.js";
-import type { PaymentResult, Token } from "./types.js";
+import type { PayOptions, PaymentResult, Token } from "./types.js";
+import { executeOnMainnet, intentsEnabled, intentsExecute, quoteNearToUsdc } from "./intents.js";
 
 export interface PaymentRail {
   name: string;
   token: Token;
   /** Spendable balance of the contractor wallet, in whole tokens. */
   balance(): Promise<number>;
-  pay(payee: string, amount: number, memo: string): Promise<PaymentResult>;
+  pay(payee: string, amount: number, memo: string, opts?: PayOptions): Promise<PaymentResult>;
 }
 
 /** No chain. Fake transaction hashes, balances kept in memory. Default so anyone can run the demo. */
@@ -37,7 +38,7 @@ function explorer(txHash: string) {
   return `${base}/txns/${txHash}`;
 }
 
-async function loadAccount() {
+export async function loadAccount() {
   if (config.network === "mainnet" && !config.allowMainnet) {
     throw new Error("Refusing to use mainnet. Set ALLOW_MAINNET=1 if you really mean it.");
   }
@@ -65,10 +66,35 @@ export class NearRail implements PaymentRail {
     return Number(utils.format.formatNearAmount(b.available, 6).replace(/,/g, ""));
   }
 
-  async pay(payee: string, amount: number): Promise<PaymentResult> {
+  async pay(payee: string, amount: number, _memo: string, opts?: PayOptions): Promise<PaymentResult> {
     const { utils } = await import("near-api-js");
     const yocto = utils.format.parseNearAmount(amount.toFixed(6));
     if (!yocto) throw new Error(`bad amount ${amount}`);
+
+    if (opts?.settleIn === "USDC" && intentsEnabled()) {
+      if (intentsExecute()) {
+        // Mainnet: real swap. EXACT_INPUT, so exactly `amount` NEAR leaves the wallet.
+        const q = await quoteNearToUsdc(amount, payee, config.contractorAccountId, false);
+        const res = await executeOnMainnet(await this.acct(), q);
+        if (res.status !== "SUCCESS") throw new Error(`NEAR Intents swap ${res.status} (deposit tx ${res.depositTx})`);
+        return {
+          txHash: res.depositTx, rail: "near+intents", explorerUrl: explorer(res.depositTx),
+          settlement: `${amount} NEAR swapped to ${q.amountOutFormatted} USDC for ${payee} via NEAR Intents (1Click ${q.correlationId})`,
+        };
+      }
+      // Testnet: NEAR Intents is mainnet-only. Get a live dry-run quote, then settle in NEAR on testnet.
+      let settlement: string;
+      try {
+        const q = await quoteNearToUsdc(amount, "intents.near", "intents.near", true);
+        settlement = `NEAR Intents live quote: ${q.amountInFormatted} NEAR -> ${q.amountOutFormatted} USDC ($${Number(q.amountOutUsd).toFixed(2)}). Dry run, because Intents is mainnet-only; paid in NEAR on testnet.`;
+      } catch (e) {
+        settlement = `NEAR Intents quote failed (${(e as Error).message.slice(0, 100)}); paid in NEAR on testnet.`;
+      }
+      const out = await (await this.acct()).sendMoney(payee, BigInt(yocto));
+      const txHash = out.transaction_outcome.id;
+      return { txHash, rail: this.name, explorerUrl: explorer(txHash), settlement };
+    }
+
     const out = await (await this.acct()).sendMoney(payee, BigInt(yocto));
     const txHash = out.transaction_outcome.id;
     return { txHash, rail: this.name, explorerUrl: explorer(txHash) };

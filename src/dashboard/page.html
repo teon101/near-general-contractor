@@ -208,7 +208,7 @@ function render(e) {
       break;
     }
     case "check": add(e.id, `<div class="event"><span class="chip ${e.passed ? "pass" : "fail"}">${e.revision ? "revision " : ""}${e.passed ? "PASS" : "FAIL"}</span><span class="txt"><b>${esc(e.who)}</b> · ${esc(e.reasons.join("; "))}</span></div>`); break;
-    case "paid": add(e.id, `<div class="event pay"><span class="chip paid">paid</span><span class="txt"><b>${e.amount} ${token}</b> to <span class="mono">${esc(e.payee)}</span> · ${e.explorerUrl ? `<a href="${esc(e.explorerUrl)}" target="_blank" class="mono">${esc(e.txHash.slice(0, 10))}… ↗</a>` : `<span class="mono">${esc(e.txHash.slice(0, 14))}…</span>`}</span></div>`); break;
+    case "paid": add(e.id, `<div class="event pay"><span class="chip paid">paid</span><span class="txt"><b>${e.amount} ${token}</b> to <span class="mono">${esc(e.payee)}</span> · ${e.explorerUrl ? `<a href="${esc(e.explorerUrl)}" target="_blank" class="mono">${esc(e.txHash.slice(0, 10))}… ↗</a>` : `<span class="mono">${esc(e.txHash.slice(0, 14))}…</span>`}${e.settlement ? `<br><span style="color:var(--blue)">⇄ ${esc(e.settlement)}</span>` : ""}</span></div>`); break;
     case "receipt": {
       const l = e.line; $("receiptsCard").classList.remove("hidden");
       const n = (x) => (x == null ? "–" : `${x}`);

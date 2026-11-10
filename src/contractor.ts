@@ -40,7 +40,7 @@ export type AgentEvent =
   | { type: "quotes"; id: string; quotes: { handle: string; price: number }[] }
   | { type: "msg"; id: string; from: string; text: string; kind: "quote" | "counter" | "reply" | "decision"; price?: number; by?: string }
   | { type: "check"; id: string; who: string; passed: boolean; reasons: string[]; revision: boolean }
-  | { type: "paid"; id: string; handle: string; payee: string; amount: number; txHash: string; explorerUrl: string | null }
+  | { type: "paid"; id: string; handle: string; payee: string; amount: number; txHash: string; explorerUrl: string | null; settlement: string | null }
   | { type: "receipt"; line: ReceiptLine }
   | { type: "budget"; budget: number; spent: number; committed: number; available: number }
   | { type: "done"; runId: string; spent: number; report: string; chartSvg: string | null; receipts: ReceiptLine[] };
@@ -126,7 +126,7 @@ export async function runContractor(opts: {
     subtaskId: s.id, subtask: s.title, what: s.title, from: "-", payee: null,
     quoted: null, countered: null, agreed: null, paid: 0, token,
     checkPassed: null, checkNotes: [], negotiation: [], outcome: "skipped",
-    txHash: null, explorerUrl: null, at: now(), ...p,
+    txHash: null, explorerUrl: null, settlement: null, at: now(), ...p,
   });
 
   for (const s of plan.subtasks) {
@@ -213,15 +213,16 @@ export async function runContractor(opts: {
       }
 
       // 7. Pay
-      const pay = await guard.pay(commitment.id, outcome.price, rail, `${runId} ${s.id} ${s.title}`);
+      const pay = await guard.pay(commitment.id, outcome.price, rail, `${runId} ${s.id} ${s.title}`, { settleIn: token === "USDC" ? undefined : w.payIn });
       outputs[s.skill] = delivery.output;
       pushReceipt(line(s, {
         from: `@${w.handle}`, payee: w.payee, quoted: q.price, countered, agreed: outcome.price, paid: outcome.price,
         checkPassed: true, checkNotes: notes, outcome: "paid", negotiation: outcome.log,
-        txHash: pay.txHash, explorerUrl: pay.explorerUrl ?? null,
+        txHash: pay.txHash, explorerUrl: pay.explorerUrl ?? null, settlement: pay.settlement ?? null,
       }));
       log(`  PAID ${outcome.price} ${token} to ${w.payee}  tx ${pay.txHash}`);
-      emit({ type: "paid", id: s.id, handle: w.handle, payee: w.payee, amount: outcome.price, txHash: pay.txHash, explorerUrl: pay.explorerUrl ?? null });
+      if (pay.settlement) log(`  settlement: ${pay.settlement}`);
+      emit({ type: "paid", id: s.id, handle: w.handle, payee: w.payee, amount: outcome.price, txHash: pay.txHash, explorerUrl: pay.explorerUrl ?? null, settlement: pay.settlement ?? null });
       emit({ type: "part", id: s.id, status: "paid" });
       budgetEvent();
       done = true;
