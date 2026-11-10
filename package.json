@@ -13,7 +13,8 @@
     "workers": "tsx src/workers/server.ts",
     "test": "node --import tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "setup:testnet": "tsx scripts/setup-testnet.ts"
+    "setup:testnet": "tsx scripts/setup-testnet.ts",
+    "dashboard": "tsx src/dashboard/server.ts"
   },
   "dependencies": {
     "near-api-js": "^5.1.1"

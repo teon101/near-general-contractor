@@ -32,6 +32,14 @@ Tests (spend guard, negotiation, checks, and an end-to-end budget test):
 npm test
 ```
 
+## Live dashboard
+
+```bash
+npm run dashboard
+```
+
+Open http://localhost:3000 (in Codespaces, open the forwarded port 3000). Type a task and budget, hit **Run agent**, and watch the plan, every quote, counter-offer and reply as a chat, each check (PASS/FAIL), each payment with its explorer link, a live budget meter (spent / committed / left), the receipts table, and the finished deliverable. It uses the same `.env` as the CLI, so with `PAYMENT_RAIL=near` the payments are real testnet transactions. Add `?pace=300` to the URL to speed up the playback (default 650 ms per step). The server only listens on localhost and caps budgets at `DASHBOARD_MAX_BUDGET` (default 2), because anyone who can open the page can start a run that spends from the contractor wallet.
+
 ## What one demo run shows
 
 The planned spend for each part comes from live Agent Market pricing, so exact numbers move from run to run. The branches don't:
@@ -112,7 +120,8 @@ So the contractor uses the Agent Market **read-only, for reference prices** when
 
 ```
 src/
-  cli.ts            entry point
+  cli.ts            entry point (terminal)
+  dashboard/        live web dashboard (server + single-page UI)
   contractor.ts     the task loop
   planner.ts        split task (AI or rules), do vs. buy, planned spend, acceptance checks
   brain.ts          AI counter wording, in-house general work, AI judge

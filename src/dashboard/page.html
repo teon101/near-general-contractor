@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>General Contractor · NEAR</title>
+<style>
+  :root {
+    --bg: #0c0e0d; --panel: #141716; --panel2: #1a1e1c; --line: #262b29;
+    --text: #e8ecea; --muted: #8a938f; --dim: #5c6561;
+    --green: #00ec97; --green-dim: rgba(0,236,151,.14);
+    --amber: #ffb547; --amber-dim: rgba(255,181,71,.14);
+    --red: #ff6b6b; --red-dim: rgba(255,107,107,.14);
+    --blue: #7aa7ff; --blue-dim: rgba(122,167,255,.14);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, Segoe UI, sans-serif; }
+  a { color: var(--green); }
+  header { display: flex; align-items: center; gap: 14px; padding: 16px 28px; border-bottom: 1px solid var(--line); }
+  .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--green); color: #04130c; font-weight: 800; display: grid; place-items: center; font-size: 14px; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .badges { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); }
+  .badge.live { color: var(--green); border-color: rgba(0,236,151,.35); }
+  main { max-width: 1280px; margin: 0 auto; padding: 22px 28px 60px; }
+  .ask { display: grid; grid-template-columns: 1fr 150px auto; gap: 10px; }
+  .ask textarea, .ask input { width: 100%; background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 12px 14px; font: inherit; resize: none; }
+  .ask textarea:focus, .ask input:focus { outline: none; border-color: var(--green); }
+  .ask label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  button { background: var(--green); color: #04130c; border: 0; border-radius: 10px; padding: 0 22px; font: inherit; font-weight: 700; cursor: pointer; align-self: end; height: 48px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .meter { margin: 22px 0 6px; }
+  .meter .bar { height: 12px; border-radius: 999px; background: var(--panel2); overflow: hidden; display: flex; border: 1px solid var(--line); }
+  .meter .bar div { transition: width .5s ease; }
+  .meter .spent { background: var(--green); } .meter .committed { background: var(--amber); }
+  .meter .nums { display: flex; gap: 22px; margin-top: 8px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+  .meter .nums b { color: var(--text); font-weight: 600; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 18px; margin-top: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card > h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .brain { font-size: 12px; color: var(--muted); margin-bottom: 12px; font-family: var(--mono); }
+  .part { padding: 12px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 8px; background: var(--panel2); transition: border-color .3s; }
+  .part.active { border-color: var(--blue); }
+  .part .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .part .t { font-weight: 600; font-size: 14px; }
+  .part .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .part .why { font-size: 12px; color: var(--dim); margin-top: 4px; font-style: italic; }
+  .chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; font-family: var(--mono); }
+  .chip.pending { background: var(--panel); color: var(--dim); }
+  .chip.active { background: var(--blue-dim); color: var(--blue); }
+  .chip.paid, .chip.pass, .chip.in_house { background: var(--green-dim); color: var(--green); }
+  .chip.failed, .chip.fail { background: var(--red-dim); color: var(--red); }
+  .chip.skipped, .chip.walked { background: var(--amber-dim); color: var(--amber); }
+  .feed { min-height: 420px; }
+  .section { margin-bottom: 18px; }
+  .section h3 { font-size: 13px; margin: 0 0 10px; color: var(--muted); font-weight: 600; }
+  .row { display: flex; margin: 8px 0; animation: in .35s ease; }
+  .row.me { justify-content: flex-end; }
+  .bubble { max-width: 78%; padding: 10px 13px; border-radius: 12px; font-size: 14px; background: var(--panel2); border: 1px solid var(--line); }
+  .me .bubble { background: rgba(0,236,151,.08); border-color: rgba(0,236,151,.28); }
+  .bubble .who { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-family: var(--mono); }
+  .bubble .price { font-family: var(--mono); font-weight: 700; }
+  .event { font-size: 13px; padding: 8px 12px; border-radius: 10px; margin: 8px 0; display: flex; gap: 10px; align-items: flex-start; animation: in .35s ease; background: var(--panel2); border: 1px solid var(--line); }
+  .event .chip { margin-top: 1px; }
+  .event .txt { color: var(--muted); }
+  .event .txt b { color: var(--text); font-weight: 600; }
+  .event.pay { border-color: rgba(0,236,151,.35); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .empty { color: var(--dim); font-size: 14px; padding: 40px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.n { font-family: var(--mono); white-space: nowrap; }
+  .out { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .chart svg { width: 100%; height: auto; border-radius: 10px; }
+  .md h1 { font-size: 20px; margin: 0 0 10px; } .md h2 { font-size: 16px; margin: 18px 0 8px; } .md h3 { font-size: 14px; }
+  .md p, .md li { color: #cfd6d3; font-size: 14px; }
+  .error { background: var(--red-dim); color: var(--red); padding: 12px 14px; border-radius: 10px; margin-top: 14px; display: none; }
+  .hidden { display: none; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 900px) { .grid, .out { grid-template-columns: 1fr; } .ask { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">GC</div>
+  <div><h1>General Contractor</h1><div class="sub">Give it a task and a budget. It hires agents, negotiates, checks the work and pays on NEAR.</div></div>
+  <div class="badges" id="badges"></div>
+</header>
+<main>
+  <div class="ask">
+    <div><label>Task</label><textarea id="task" rows="2">Make a 7-day market brief on NEAR with a price chart, plus a 5-tweet thread announcing it</textarea></div>
+    <div><label id="budgetLabel">Budget</label><input id="budget" type="number" step="0.1" min="0.1" value="1"></div>
+    <button id="run">Run agent</button>
+  </div>
+  <div class="error" id="error"></div>
+
+  <div class="meter">
+    <div class="bar"><div class="spent" id="mSpent" style="width:0"></div><div class="committed" id="mCommitted" style="width:0"></div></div>
+    <div class="nums">
+      <span><span class="dot" style="background:var(--green)"></span>spent <b id="nSpent">0</b></span>
+      <span><span class="dot" style="background:var(--amber)"></span>committed <b id="nCommitted">0</b></span>
+      <span><span class="dot" style="background:var(--panel2);border:1px solid var(--line)"></span>left <b id="nLeft">0</b></span>
+      <span>of <b id="nBudget">0</b></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>Plan</h2><div class="brain" id="brain"></div><div id="plan"><div class="empty">The plan shows up here.</div></div></div>
+    <div class="card feed"><h2>Live</h2><div id="feed"><div class="empty">Hit "Run agent" to watch it work.</div></div></div>
+  </div>
+
+  <div class="card hidden" id="receiptsCard" style="margin-top:18px"><h2>Receipts</h2><table><thead><tr>
+    <th>Part</th><th>From</th><th>Quoted</th><th>Countered</th><th>Paid</th><th>Check</th><th>Outcome</th><th>Tx</th>
+  </tr></thead><tbody id="receipts"></tbody></table></div>
+
+  <div class="out hidden" id="outCard">
+    <div class="card chart"><h2>Chart</h2><div id="chart"></div></div>
+    <div class="card md"><h2>Deliverable</h2><div id="report"></div></div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let token = "USDC", parts = {}, sections = {}, queue = [], draining = false;
+const PACE = Number(new URLSearchParams(location.search).get("pace") ?? 650);
+
+fetch("/api/info").then((r) => r.json()).then((i) => {
+  token = i.token;
+  $("budgetLabel").textContent = `Budget (${i.token})`;
+  $("budget").max = i.maxBudget;
+  const net = i.rail === "simulate" ? "simulated payments" : `NEAR ${i.network}`;
+  $("badges").innerHTML =
+    `<span class="badge ${i.rail === "simulate" ? "" : "live"}">${esc(net)}</span>` +
+    (i.rail === "simulate" ? "" : `<span class="badge">${esc(i.account)}</span>`) +
+    `<span class="badge">brain: ${esc(i.brain)}</span>` +
+    `<span class="badge">${i.workers.length} worker agents</span>`;
+});
+
+function md(s) {
+  const lines = esc(s).split("\n"); let html = "", list = null;
+  const inline = (t) => t.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|\s)_(.+?)_(?=\s|$)/g, "$1<i>$2</i>").replace(/\[(.+?)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  const close = () => { if (list) { html += `</${list}>`; list = null; } };
+  for (const l of lines) {
+    if (/^!\[/.test(l)) continue;
+    let m;
+    if ((m = l.match(/^(#{1,3})\s+(.*)/))) { close(); html += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; }
+    else if ((m = l.match(/^\s*[-*]\s+(.*)/))) { if (list !== "ul") { close(); html += "<ul>"; list = "ul"; } html += `<li>${inline(m[1])}</li>`; }
+    else if ((m = l.match(/^\s*\d+[./]\s+(.*)/))) { if (list !== "ol") { close(); html += "<ol>"; list = "ol"; } html += `<li>${inline(m[1])}</li>`; }
+    else if (l.trim() === "") close();
+    else { close(); html += `<p>${inline(l)}</p>`; }
+  }
+  close(); return html;
+}
+
+const statusChip = { pending: "waiting", active: "working", paid: "paid", in_house: "done in-house", skipped: "skipped", failed: "failed" };
+function setPart(id, status) {
+  const el = parts[id]; if (!el) return;
+  el.classList.toggle("active", status === "active");
+  el.querySelector(".chip").className = `chip ${status}`;
+  el.querySelector(".chip").textContent = statusChip[status];
+}
+function section(id) {
+  if (!sections[id]) {
+    const p = parts[id];
+    const div = document.createElement("div"); div.className = "section";
+    div.innerHTML = `<h3>${esc(id)} · ${esc(p ? p.dataset.title : "")}</h3>`;
+    $("feed").appendChild(div); sections[id] = div;
+  }
+  return sections[id];
+}
+const add = (id, html) => { const s = section(id); s.insertAdjacentHTML("beforeend", html); s.lastElementChild.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
+
+function render(e) {
+  switch (e.type) {
+    case "plan": {
+      $("brain").textContent = `brain: ${e.plan.brain}`;
+      $("plan").innerHTML = "";
+      for (const s of e.plan.subtasks) {
+        const d = document.createElement("div"); d.className = "part"; d.dataset.title = s.title;
+        d.innerHTML = `<div class="top"><span class="t">${esc(s.title)}</span><span class="chip pending">waiting</span></div>
+          <div class="meta">${s.mode === "buy" ? `buy · planned <span class="mono">${s.plannedSpend} ${token}</span>` : "in-house"}</div>
+          <div class="meta">check: ${esc(s.acceptance)}</div>${s.why ? `<div class="why">${esc(s.why)}</div>` : ""}`;
+        $("plan").appendChild(d); parts[s.id] = d;
+      }
+      break;
+    }
+    case "budget": {
+      const pct = (x) => `${Math.min(100, (x / e.budget) * 100)}%`;
+      $("mSpent").style.width = pct(e.spent); $("mCommitted").style.width = pct(e.committed);
+      $("nSpent").textContent = `${e.spent} ${token}`; $("nCommitted").textContent = `${e.committed} ${token}`;
+      $("nLeft").textContent = `${Math.round(e.available * 1e6) / 1e6} ${token}`; $("nBudget").textContent = `${e.budget} ${token}`;
+      break;
+    }
+    case "part": setPart(e.id, e.status); if (e.status === "active") section(e.id); break;
+    case "quotes": add(e.id, `<div class="event"><span class="chip active">quotes</span><span class="txt">${e.quotes.map((q) => `<b>@${esc(q.handle)}</b> ${q.price} ${token}`).join(" · ")}</span></div>`); break;
+    case "msg": {
+      const me = e.from === "contractor";
+      if (e.kind === "decision") {
+        const walked = /walked away/.test(e.text);
+        add(e.id, `<div class="event"><span class="chip ${walked ? "walked" : "pass"}">${walked ? "walked away" : "deal"}</span><span class="txt">${esc(e.text)}</span></div>`);
+      } else {
+        add(e.id, `<div class="row ${me ? "me" : ""}"><div class="bubble"><div class="who">${me ? "contractor" : esc(e.from)} · ${e.kind}${e.price != null ? ` · <span class="price">${e.price} ${token}</span>` : ""}</div>${esc(e.text)}</div></div>`);
+      }
+      break;
+    }
+    case "check": add(e.id, `<div class="event"><span class="chip ${e.passed ? "pass" : "fail"}">${e.revision ? "revision " : ""}${e.passed ? "PASS" : "FAIL"}</span><span class="txt"><b>${esc(e.who)}</b> · ${esc(e.reasons.join("; "))}</span></div>`); break;
+    case "paid": add(e.id, `<div class="event pay"><span class="chip paid">paid</span><span class="txt"><b>${e.amount} ${token}</b> to <span class="mono">${esc(e.payee)}</span> · ${e.explorerUrl ? `<a href="${esc(e.explorerUrl)}" target="_blank" class="mono">${esc(e.txHash.slice(0, 10))}… ↗</a>` : `<span class="mono">${esc(e.txHash.slice(0, 14))}…</span>`}</span></div>`); break;
+    case "receipt": {
+      const l = e.line; $("receiptsCard").classList.remove("hidden");
+      const n = (x) => (x == null ? "–" : `${x}`);
+      const oc = { paid: "paid", not_paid_failed_check: "fail", walked_away: "walked", done_in_house: "in_house", skipped: "skipped" }[l.outcome];
+      $("receipts").insertAdjacentHTML("beforeend", `<tr><td>${esc(l.subtask)}</td><td>${esc(l.from)}</td><td class="n">${n(l.quoted)}</td><td class="n">${n(l.countered)}</td><td class="n">${l.paid}</td>
+        <td>${l.checkPassed == null ? "–" : `<span class="chip ${l.checkPassed ? "pass" : "fail"}">${l.checkPassed ? "PASS" : "FAIL"}</span>`}</td>
+        <td><span class="chip ${oc}">${esc(l.outcome.replace(/_/g, " "))}</span></td>
+        <td class="n">${l.explorerUrl ? `<a href="${esc(l.explorerUrl)}" target="_blank">${esc(l.txHash.slice(0, 8))}… ↗</a>` : l.txHash ? esc(l.txHash.slice(0, 10)) + "…" : "–"}</td></tr>`);
+      break;
+    }
+    case "done":
+      $("outCard").classList.remove("hidden");
+      $("chart").innerHTML = e.chartSvg ?? '<div class="empty">No chart this run.</div>';
+      $("report").innerHTML = md(e.report);
+      break;
+    case "error": $("error").textContent = e.message; $("error").style.display = "block"; break;
+    case "end": $("run").disabled = false; $("run").textContent = "Run agent"; break;
+  }
+}
+
+function drain() {
+  if (!queue.length) { draining = false; return; }
+  draining = true;
+  const e = queue.shift();
+  render(e);
+  const instant = ["budget", "receipt", "log", "end", "start"].includes(e.type);
+  setTimeout(drain, instant ? 0 : PACE);
+}
+
+$("run").onclick = () => {
+  parts = {}; sections = {}; queue = [];
+  $("feed").innerHTML = ""; $("plan").innerHTML = '<div class="empty">Planning…</div>'; $("receipts").innerHTML = "";
+  $("receiptsCard").classList.add("hidden"); $("outCard").classList.add("hidden"); $("error").style.display = "none";
+  $("run").disabled = true; $("run").textContent = "Working…";
+  const q = new URLSearchParams({ task: $("task").value, budget: $("budget").value });
+  const es = new EventSource(`/api/run?${q}`);
+  es.onmessage = (m) => {
+    const e = JSON.parse(m.data);
+    if (e.type === "log") return;
+    queue.push(e); if (!draining) drain();
+    if (e.type === "end") es.close();
+  };
+  es.onerror = () => { es.close(); queue.push({ type: "end" }); if (!draining) drain(); };
+};
+</script>
+</body>
+</html>
