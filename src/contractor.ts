@@ -38,7 +38,7 @@ export type AgentEvent =
   | { type: "plan"; plan: Plan }
   | { type: "part"; id: string; status: "active" | "paid" | "in_house" | "skipped" | "failed" }
   | { type: "quotes"; id: string; quotes: { handle: string; price: number }[] }
-  | { type: "msg"; id: string; from: string; text: string; kind: "quote" | "counter" | "reply" | "decision"; price?: number }
+  | { type: "msg"; id: string; from: string; text: string; kind: "quote" | "counter" | "reply" | "decision"; price?: number; by?: string }
   | { type: "check"; id: string; who: string; passed: boolean; reasons: string[]; revision: boolean }
   | { type: "paid"; id: string; handle: string; payee: string; amount: number; txHash: string; explorerUrl: string | null }
   | { type: "receipt"; line: ReceiptLine }
@@ -144,23 +144,23 @@ export async function runContractor(opts: {
     const candidates = workers.filter((w) => w.skill === s.skill);
     const quotes = (await Promise.all(candidates.map(async (w) => ({ w, q: await requestQuote(w, briefFor(s)) }))))
       .sort((a, b) => a.q.price - b.q.price || b.w.rating - a.w.rating);
-    log(`  quotes: ${quotes.map(({ w, q }) => `@${w.handle} ${q.price}`).join(", ")}`);
+    log(`  quotes: ${quotes.map(({ w, q }) => `@${w.handle} ${q.price}${q.by === "AI" ? " (AI-priced)" : ""}`).join(", ")}`);
     emit({ type: "quotes", id: s.id, quotes: quotes.map(({ w, q }) => ({ handle: w.handle, price: q.price })) });
 
     let done = false;
     for (const { w, q } of quotes) {
       // 3. Negotiate
       let countered: number | null = null;
-      emit({ type: "msg", id: s.id, from: `@${w.handle}`, kind: "quote", price: q.price, text: `I can do "${s.title}" for ${q.price} ${token}.` });
+      emit({ type: "msg", id: s.id, from: `@${w.handle}`, kind: "quote", price: q.price, by: q.by, text: q.by === "AI" && q.note ? q.note : `I can do "${s.title}" for ${q.price} ${token}.` });
       const outcome = await negotiate({
         quote: q, planned: s.plannedSpend, available: guard.available(), token,
         walkAwayMultiplier: config.walkAwayMultiplier,
         marketNote: plan.priceSource.startsWith("market") ? "current Agent Market prices for this kind of work" : "my price plan for this job",
-        sendCounter: async (price, reasoning) => {
+        sendCounter: async (price, reasoning, writtenBy) => {
           countered = price;
-          emit({ type: "msg", id: s.id, from: "contractor", kind: "counter", price, text: reasoning });
-          const resp = await sendCounter(w, price, reasoning);
-          emit({ type: "msg", id: s.id, from: `@${w.handle}`, kind: "reply", price: resp.accepted ? price : resp.finalPrice, text: resp.message });
+          emit({ type: "msg", id: s.id, from: "contractor", kind: "counter", price, text: reasoning, by: writtenBy.startsWith("AI") ? "AI" : undefined });
+          const resp = await sendCounter(w, price, reasoning, q.price);
+          emit({ type: "msg", id: s.id, from: `@${w.handle}`, kind: "reply", price: resp.accepted ? price : resp.finalPrice, text: resp.message, by: resp.by });
           return resp;
         },
         writeReasoning: (counter, fallback) => counterMessage({

@@ -29,7 +29,16 @@ function fakeLlm(port: number) {
       const sys = msgs[0].content;
       const user = msgs[msgs.length - 1].content;
       let content = "";
-      if (sys.includes("planning brain")) {
+      if (sys.includes("sells") && sys.includes("list price")) {
+        // AI quote: chartsmith tries to overcharge wildly -> must be clamped to list x 1.3
+        content = sys.includes("@chartsmith") ? '{"price": 99, "note": "Custom chart, premium work."}' : '{"price": 0.17, "note": "Happy to help."}';
+      } else if (sys.includes("ONE counter-offer")) {
+        // chartsmith "accepts" a counter below its minimum -> must be overridden to its minimum
+        // penpal names a final price far above its own quote -> must be clamped to its quote
+        content = sys.includes("@chartsmith") ? '{"accept": true, "final_price": 0.3, "message": "Deal!"}'
+          : sys.includes("@penpal") ? '{"accept": false, "final_price": 5, "message": "My work is worth more."}'
+          : '{"accept": true, "final_price": 0, "message": "Sure."}';
+      } else if (sys.includes("planning brain")) {
         content = JSON.stringify({ asset: "near", parts: [
           { skill: "data", title: "Get NEAR prices", why: "everything else needs the numbers" },
           { skill: "chart", title: "Chart", why: "the user asked for a chart" },
@@ -71,6 +80,16 @@ test("end to end with the AI brain: plans a general part, AI counters, AI judge 
     assert.equal(general.outcome, "done_in_house");
     assert.equal(general.checkPassed, true);
     assert.ok(logs.some((l) => l.includes("message by AI")), "counter message should come from the AI");
+    // AI workers, bounded by code
+    const chart = res.receipts.filter((r) => r.subtaskId === "t2");
+    assert.equal(chart[0].quoted, 0.585, "AI quote of 99 clamped to list 0.45 x 1.3");
+    assert.ok(logs.some((l) => l.includes("accept below minimum overridden")), "accepting below the floor must be overridden");
+    const brief = res.receipts.find((r) => r.subtaskId === "t3" && r.from === "@penpal")!;
+    assert.equal(brief.quoted, 0.7, "AI quote of 0.17 below the floor is clamped up to the floor");
+    assert.ok(brief.negotiation.some((n) => n.includes(`final price ${brief.quoted}.`)), "final price above own quote clamped to the quote");
+    assert.equal(brief.outcome, "walked_away");
+    const data = res.receipts.find((r) => r.from === "@datafeed")!;
+    assert.equal(data.quoted, 0.17, "AI-priced quote inside bounds is kept");
     assert.ok(res.spent <= 1);
   } finally {
     stop();

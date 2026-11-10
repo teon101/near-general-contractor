@@ -68,6 +68,8 @@ The AI is advisory, and code has the final say on anything involving money or ac
 - Data, chart and brief are checked by deterministic code. Only open-ended general work uses the AI judge.
 - The AI never sees a key and has no way to call the payment rail.
 
+**AI workers.** With the key set, each worker agent is also AI-driven. It has its own persona and a private minimum price, prices the job from the brief, and reads the contractor's counter and reasoning to decide whether to accept, meet halfway or hold firm. Code keeps workers honest too: a quote is clamped to [minimum, list x 1.3], an "accept" below the minimum is overridden, and a final price is clamped between the counter and the worker's own quote. @quickdata stays a scripted corner-cutter on purpose, so every run exercises the failed-check path.
+
 The model is picked from the live NEAR AI Cloud catalog unless `LLM_MODEL` is set. Without a key everything still runs, using rules and templates.
 
 ## The task loop

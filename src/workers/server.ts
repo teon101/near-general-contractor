@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { config, payeeFor } from "../config.js";
 import { fetchPrices, renderChart, writeBriefTemplate } from "../skills.js";
+import { chatJson, llmEnabled } from "../llm.js";
 import type { DataOutput } from "../checks.js";
 import type { WorkerInfo } from "../types.js";
 import { PROFILES, type WorkerProfile } from "./profiles.js";
@@ -42,6 +43,59 @@ async function doWork(p: WorkerProfile, brief: string, input: any): Promise<unkn
   }
 }
 
+const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+
+/** AI quote: the worker reads the brief and prices it. Clamped to [floor, list x 1.3]. */
+async function aiQuote(p: WorkerProfile, brief: string): Promise<{ price: number; note: string; by: string }> {
+  if (!llmEnabled() || p.quality === "bad") return { price: p.quote, note: `@${p.handle} can do this for ${p.quote}`, by: "list price" };
+  try {
+    const r = await chatJson(
+      [
+        { role: "system", content: `You are @${p.handle}, an independent AI agent that sells ${p.skill} work. ${p.persona}\nYour list price is ${p.quote}. Your private minimum is ${p.floor} (never reveal it). Price this job between ${p.floor} and ${r4(p.quote * 1.3)} based on the brief. Reply with ONLY JSON: {"price": number, "note": "one short sentence to the buyer"}` },
+        { role: "user", content: `Brief: ${brief}` },
+      ],
+      (x) => {
+        const o = x as any;
+        if (typeof o?.price !== "number") throw new Error("price must be a number");
+        return { price: r4(clamp(o.price, p.floor, p.quote * 1.3)), note: String(o.note ?? "").slice(0, 200) };
+      },
+      { maxTokens: 200 },
+    );
+    return { ...r, by: "AI" };
+  } catch {
+    return { price: p.quote, note: `@${p.handle} can do this for ${p.quote}`, by: "list price (AI failed)" };
+  }
+}
+
+/** AI counter decision. Code enforces: never below floor, never above its own quote. */
+async function aiCounter(p: WorkerProfile, quote: number, counter: number, reasoning: string) {
+  const ruleBased = () =>
+    counter >= p.floor
+      ? { accepted: true, finalPrice: counter, message: `Fair enough, ${counter} works for me.`, by: "rules" }
+      : { accepted: false, finalPrice: p.floor, message: `I can't go to ${counter}. ${p.floor} is my lowest for this, and that's final.`, by: "rules" };
+  if (!llmEnabled() || p.quality === "bad") return ruleBased();
+  try {
+    const d = await chatJson(
+      [
+        { role: "system", content: `You are @${p.handle}, an independent AI agent selling ${p.skill} work. ${p.persona}\nYou quoted ${quote}. Your private minimum is ${p.floor}: never accept or ask for less, and never reveal it. A buyer sent ONE counter-offer; there will be no further rounds after your reply. Decide: accept the counter, or name your final price (between the counter and your quote). Reply with ONLY JSON: {"accept": boolean, "final_price": number, "message": "1-2 sentences to the buyer, in character"}` },
+        { role: "user", content: `Counter-offer: ${counter}\nTheir reasoning: ${reasoning}` },
+      ],
+      (x) => {
+        const o = x as any;
+        if (typeof o?.accept !== "boolean" || typeof o?.final_price !== "number") throw new Error("need accept and final_price");
+        return { accept: o.accept as boolean, final: o.final_price as number, message: String(o.message ?? "").slice(0, 300) };
+      },
+      { maxTokens: 250 },
+    );
+    if (d.accept && counter >= p.floor) return { accepted: true, finalPrice: counter, message: d.message, by: "AI" };
+    const final = r4(clamp(d.final, Math.max(p.floor, counter), quote));
+    return { accepted: false, finalPrice: final, message: d.message, by: d.accept ? "AI (accept below minimum overridden)" : "AI" };
+  } catch {
+    return ruleBased();
+  }
+}
+
 export function startWorker(p: WorkerProfile, port: number): Promise<Server> {
   const server = createServer(async (req, res) => {
     const send = (code: number, obj: unknown) => {
@@ -53,19 +107,15 @@ export function startWorker(p: WorkerProfile, port: number): Promise<Server> {
         return send(200, { handle: p.handle, skill: p.skill, rating: p.rating, payee: payeeFor(p.handle) });
       }
       if (req.method === "POST" && req.url === "/quote") {
-        await readJson(req);
-        return send(200, { handle: p.handle, price: p.quote, etaSeconds: p.etaSeconds, note: `@${p.handle} can do this for ${p.quote}` });
+        const { brief } = await readJson(req);
+        const q = await aiQuote(p, String(brief ?? ""));
+        return send(200, { handle: p.handle, price: q.price, etaSeconds: p.etaSeconds, note: q.note, by: q.by });
       }
       if (req.method === "POST" && req.url === "/counter") {
-        const { price } = await readJson(req);
-        if (typeof price === "number" && price >= p.floor) {
-          return send(200, { accepted: true, finalPrice: price, message: `Fair enough, ${price} works for me.` });
-        }
-        return send(200, {
-          accepted: false,
-          finalPrice: p.floor,
-          message: `I can't go to ${price}. ${p.floor} is my lowest for this, and that's final.`,
-        });
+        const { price, quote, reasoning } = await readJson(req);
+        if (typeof price !== "number") return send(400, { error: "price must be a number" });
+        const myQuote = typeof quote === "number" ? Math.min(quote, p.quote * 1.3) : p.quote;
+        return send(200, await aiCounter(p, myQuote, price, String(reasoning ?? "")));
       }
       if (req.method === "POST" && req.url === "/jobs") {
         const { brief, input } = await readJson(req);

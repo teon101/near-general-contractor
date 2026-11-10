@@ -203,7 +203,7 @@ function render(e) {
         const walked = /walked away/.test(e.text);
         add(e.id, `<div class="event"><span class="chip ${walked ? "walked" : "pass"}">${walked ? "walked away" : "deal"}</span><span class="txt">${esc(e.text)}</span></div>`);
       } else {
-        add(e.id, `<div class="row ${me ? "me" : ""}"><div class="bubble"><div class="who">${me ? "contractor" : esc(e.from)} · ${e.kind}${e.price != null ? ` · <span class="price">${e.price} ${token}</span>` : ""}</div>${esc(e.text)}</div></div>`);
+        add(e.id, `<div class="row ${me ? "me" : ""}"><div class="bubble"><div class="who">${me ? "contractor" : esc(e.from)} · ${e.kind}${e.by === "AI" ? ' · <span style="color:var(--blue)">AI</span>' : ""}${e.price != null ? ` · <span class="price">${e.price} ${token}</span>` : ""}</div>${esc(e.text)}</div></div>`);
       }
       break;
     }

@@ -49,6 +49,8 @@ export interface Quote {
   price: number;
   etaSeconds: number;
   note: string;
+  /** "AI" if the worker's AI priced it, otherwise its list price. */
+  by?: string;
 }
 
 export interface CounterResponse {
@@ -56,6 +58,8 @@ export interface CounterResponse {
   /** The price the worker will do it for after the counter. */
   finalPrice: number;
   message: string;
+  /** "AI" if the worker's AI decided, otherwise "rules". */
+  by?: string;
 }
 
 export interface Delivery {

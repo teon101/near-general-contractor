@@ -9,7 +9,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 export const requestQuote = (w: WorkerInfo, brief: string) => post<Quote>(`${w.url}/quote`, { brief });
-export const sendCounter = (w: WorkerInfo, price: number, reasoning: string) =>
-  post<CounterResponse>(`${w.url}/counter`, { price, reasoning });
+export const sendCounter = (w: WorkerInfo, price: number, reasoning: string, quote: number) =>
+  post<CounterResponse>(`${w.url}/counter`, { price, reasoning, quote });
 export const hire = (w: WorkerInfo, brief: string, price: number, input: unknown) =>
   post<Delivery>(`${w.url}/jobs`, { brief, price, input });

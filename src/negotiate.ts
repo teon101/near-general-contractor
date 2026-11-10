@@ -19,7 +19,7 @@ export interface NegotiationInput {
   token: string;
   marketNote: string;
   /** Sends the counter to the worker and returns its answer. Called at most once. */
-  sendCounter: (price: number, reasoning: string) => Promise<CounterResponse>;
+  sendCounter: (price: number, reasoning: string, writtenBy: string) => Promise<CounterResponse>;
   /** Optional: AI wording for the counter. Gets the price already decided by code. */
   writeReasoning?: (counter: number, fallback: string) => Promise<{ text: string; by: string }>;
 }
@@ -47,8 +47,8 @@ export async function negotiate(i: NegotiationInput): Promise<NegotiationOutcome
   const written = i.writeReasoning ? await i.writeReasoning(counter, fallback) : { text: fallback, by: "template" };
   const reasoning = written.text;
   log.push(`counter: ${counter} ${i.token} (message by ${written.by}). "${reasoning}"`);
-  const resp = await i.sendCounter(counter, reasoning);
-  log.push(`reply: ${resp.accepted ? "accepted counter" : `final price ${resp.finalPrice}`}. "${resp.message}"`);
+  const resp = await i.sendCounter(counter, reasoning, written.by);
+  log.push(`reply${resp.by ? ` (${resp.by})` : ""}: ${resp.accepted ? "accepted counter" : `final price ${resp.finalPrice}`}. "${resp.message}"`);
 
   const final = resp.accepted ? counter : resp.finalPrice;
   if (final <= ceiling) {
