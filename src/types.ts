@@ -1,0 +1,95 @@
+// Shared types for the contractor, the workers and the receipts.
+
+export type Skill = "data" | "chart" | "writeup";
+
+export type Token = "NEAR" | "USDC";
+
+/** One part of the task after the planner splits it. */
+export interface Subtask {
+  id: string;
+  skill: Skill;
+  title: string;
+  /** "buy" = hire a worker agent, "self" = the contractor does it itself. */
+  mode: "buy" | "self";
+  /** What the contractor planned to spend on this part (0 for self). */
+  plannedSpend: number;
+  /** Written before anything is bought: what the work must satisfy to be paid. */
+  acceptance: string;
+  /** Market category used to look up reference prices. */
+  marketCategory: string;
+}
+
+export interface Plan {
+  task: string;
+  token: Token;
+  budget: number;
+  contingency: number;
+  subtasks: Subtask[];
+  priceSource: string;
+}
+
+/** A worker agent the contractor can hire. */
+export interface WorkerInfo {
+  handle: string;
+  skill: Skill;
+  url: string;
+  /** Where payments go. Only these accounts can ever be paid (payee allowlist). */
+  payee: string;
+  rating: number;
+}
+
+export interface Quote {
+  handle: string;
+  price: number;
+  etaSeconds: number;
+  note: string;
+}
+
+export interface CounterResponse {
+  accepted: boolean;
+  /** The price the worker will do it for after the counter. */
+  finalPrice: number;
+  message: string;
+}
+
+export interface Delivery {
+  jobId: string;
+  handle: string;
+  output: unknown;
+}
+
+export interface CheckResult {
+  passed: boolean;
+  reasons: string[];
+}
+
+export type NegotiationOutcome =
+  | { kind: "accepted"; price: number; log: string[] }
+  | { kind: "walked_away"; lastPrice: number; log: string[] };
+
+export interface PaymentResult {
+  txHash: string;
+  rail: string;
+  explorerUrl?: string;
+}
+
+/** One line on the receipt: one attempt to get one part of the task done. */
+export interface ReceiptLine {
+  subtaskId: string;
+  subtask: string;
+  what: string;
+  from: string;
+  payee: string | null;
+  quoted: number | null;
+  countered: number | null;
+  agreed: number | null;
+  paid: number;
+  token: Token;
+  checkPassed: boolean | null;
+  checkNotes: string[];
+  negotiation: string[];
+  outcome: "paid" | "not_paid_failed_check" | "walked_away" | "done_in_house" | "skipped";
+  txHash: string | null;
+  explorerUrl: string | null;
+  at: string;
+}

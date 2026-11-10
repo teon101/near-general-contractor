@@ -1,0 +1,25 @@
+{
+  "name": "near-general-contractor",
+  "version": "0.1.0",
+  "description": "A general contractor agent: give it a task and a budget, it splits the work, hires other agents, negotiates once, checks the work, pays in NEAR or USDC, and issues a receipt for every purchase.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "demo": "tsx src/cli.ts",
+    "start": "tsx src/cli.ts",
+    "workers": "tsx src/workers/server.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "near-api-js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
