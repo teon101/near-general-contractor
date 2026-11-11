@@ -136,7 +136,7 @@ fetch("/api/info").then((r) => r.json()).then((i) => {
   $("badges").innerHTML =
     `<span class="badge ${i.rail === "simulate" ? "" : "live"}">${esc(net)}</span>` +
     (i.rail === "simulate" ? "" : `<span class="badge">${esc(i.account)}</span>`) +
-    `<span class="badge">brain: ${esc(i.brain)}</span>` +
+    `<span class="badge" id="brainBadge">brain: ${esc(i.brain)}</span>` +
     `<span class="badge">${i.workers.length} worker agents</span>`;
 });
 
@@ -178,6 +178,7 @@ function render(e) {
   switch (e.type) {
     case "plan": {
       $("brain").textContent = `brain: ${e.plan.brain}`;
+      const bb = document.getElementById("brainBadge"); if (bb) bb.textContent = `brain: ${e.plan.brain.startsWith("NEAR AI") ? "NEAR AI Cloud" : "built-in rules"}`;
       $("plan").innerHTML = "";
       for (const s of e.plan.subtasks) {
         const d = document.createElement("div"); d.className = "part"; d.dataset.title = s.title;

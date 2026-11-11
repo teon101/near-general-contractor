@@ -71,7 +71,7 @@ interface Draft { skill: Skill; title: string; acceptance: string; why: string }
 function rulePlan(task: string): { asset: string | null; parts: Draft[] } {
   return {
     asset: assetFromTask(task),
-    parts: skillsForTask(task).map((s) => ({ skill: s, title: SKILLS[s].title, acceptance: SKILLS[s].acceptance, why: "keyword rule" })),
+    parts: skillsForTask(task).map((s) => ({ skill: s, title: SKILLS[s].title, acceptance: SKILLS[s].acceptance, why: "" })),
   };
 }
 
@@ -130,13 +130,13 @@ const round = (n: number) => Math.floor(n * 1e4) / 1e4;
 
 export async function makePlan(task: string, budget: number, token: Token, workers: WorkerInfo[], log: (m: string) => void = () => {}): Promise<Plan> {
   let drafted = rulePlan(task);
-  let brain = "built-in rules (set LLM_API_KEY for the AI brain)";
+  let brain = "built-in rules";
   if (llmEnabled()) {
     try {
       drafted = await aiPlan(task, budget, token, workers);
       brain = `NEAR AI Cloud (${await model()})`;
     } catch (e) {
-      brain = `built-in rules (AI brain unavailable: ${(e as Error).message.slice(0, 120)})`;
+      brain = "built-in rules";
       log(`  AI planner failed, using rules: ${(e as Error).message}`);
     }
   }
