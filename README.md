@@ -107,7 +107,7 @@ npm start -- --budget 1 --token NEAR
 ROOT_ACCOUNT_ID=you.testnet ROOT_PRIVATE_KEY=ed25519:... npm run setup:testnet
 ```
 
-Wallet running low after several runs? `npm run topup -- 3` moves 3 test NEAR from the root account to the contractor (the agent refuses any budget the wallet can't cover).
+On testnet the agent **tops itself up automatically** when the wallet holds less than the budget: first from the root account, then by sweeping a fresh testnet-faucet account into the contractor. Turn it off with `AUTO_TOPUP=0`; `npm run topup -- 3` does it by hand. On mainnet there is no auto top-up, and the agent refuses any budget the wallet can't cover.
 
 Receipts then include real transaction hashes with testnet explorer links. `PAYMENT_RAIL=usdc` pays with `ft_transfer` on the NEP-141 token set in `USDC_CONTRACT` and registers the payee's token storage first if needed (see `.env.example`).
 

@@ -13,6 +13,8 @@ export interface PaymentRail {
   /** Spendable balance of the contractor wallet, in whole tokens. */
   balance(): Promise<number>;
   pay(payee: string, amount: number, memo: string, opts?: PayOptions): Promise<PaymentResult>;
+  /** Optional: make sure the wallet holds at least `amount` (testnet auto top-up). Returns the new balance. */
+  ensureBalance?(amount: number, log: (m: string) => void): Promise<number>;
 }
 
 /** No chain. Fake transaction hashes, balances kept in memory. Default so anyone can run the demo. */
@@ -64,6 +66,12 @@ export class NearRail implements PaymentRail {
     const { utils } = await import("near-api-js");
     const b = await (await this.acct()).getAccountBalance();
     return Number(utils.format.formatNearAmount(b.available, 6).replace(/,/g, ""));
+  }
+
+  async ensureBalance(amount: number, log: (m: string) => void) {
+    if (config.network !== "testnet" || process.env.AUTO_TOPUP === "0") return this.balance();
+    const { ensureTestnetFunds } = await import("./testnet-funds.js");
+    return ensureTestnetFunds(config.contractorAccountId, amount + 0.05, log);
   }
 
   async pay(payee: string, amount: number, _memo: string, opts?: PayOptions): Promise<PaymentResult> {

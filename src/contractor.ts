@@ -60,7 +60,11 @@ export async function runContractor(opts: {
   const runId = new Date().toISOString().replace(/[:.]/g, "-");
 
   // 0. The wallet must actually hold the budget. The guard then makes sure we never spend past it.
-  const walletBalance = await rail.balance();
+  let walletBalance = await rail.balance();
+  if (walletBalance + 1e-9 < budget && rail.ensureBalance) {
+    log(`wallet holds ${walletBalance} ${token}, budget is ${budget}. Topping up testnet wallet...`);
+    try { walletBalance = await rail.ensureBalance(budget, log); } catch (e) { log(`auto top-up failed: ${(e as Error).message}`); }
+  }
   if (walletBalance + 1e-9 < budget) {
     throw new Error(`wallet holds ${walletBalance} ${token} but the budget is ${budget} ${token}. Top up the contractor wallet first.`);
   }

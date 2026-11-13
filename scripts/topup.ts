@@ -16,6 +16,7 @@ const keys = JSON.parse(readFileSync(".testnet-keys.json", "utf8"));
 const root = keys.root;
 const contractorId = process.env.CONTRACTOR_ACCOUNT_ID;
 if (!root?.accountId || !root?.privateKey) throw new Error("no root key in .testnet-keys.json (setup used your own account; top up from your wallet instead)");
+// (the agent also tops itself up automatically on testnet; this script is for doing it by hand)
 if (!contractorId) throw new Error("CONTRACTOR_ACCOUNT_ID not set in .env");
 
 const keyStore = new keyStores.InMemoryKeyStore();
