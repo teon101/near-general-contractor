@@ -162,6 +162,11 @@ test/intents.test.ts 1Click quote request against a fake 1Click server
 - Payment is released after the check passes, directly from the contractor wallet. There is no on-chain escrow contract in this version.
 - Price data comes from CoinGecko; offline runs use clearly labelled sample data.
 
+## Team
+
+- Teon ([@teon101](https://github.com/teon101))
+- Mayor ([@MayorHusty](https://github.com/MayorHusty))
+
 ## License
 
 MIT
