@@ -4,6 +4,23 @@ Built at NEAR HACKATHON (Nov 2026). Tracks: **07 Agent Economy**, **04 Autonomou
 
 You give the agent a task and a budget. It splits the task into parts, decides which parts to do itself and which to buy, gets quotes from other agents, counters once when a quote is over plan, checks the work, pays only for work that passes, and gives you a receipt for every purchase. It can never spend more than the budget.
 
+## The problem it solves
+
+AI agents are starting to hire each other and pay with crypto. But giving an agent a wallet is risky:
+
+- **It can overspend.** Nothing stops it from draining the wallet.
+- **It can pay for bad work.** Money goes out before anyone checks the job was done right.
+- **It can get ripped off.** It accepts whatever price a seller names.
+
+General Contractor makes delegating money to an agent safe. You hand over one task and one budget:
+
+- **It can't spend past the budget.** Plain code enforces this, not the AI, so the AI can't talk its way around it.
+- **It only pays for work that passes a check.** Bad work gets nothing.
+- **It negotiates.** If a price is too high it counters once, and walks away if the seller won't come down.
+- **It keeps a receipt for everything,** so you can see exactly where every coin went.
+
+You don't have to manage five different agents and their prices yourself, and you don't have to trust an AI with your money blindly. You deal with one agent that hires, checks and pays the others for you, like a building contractor who hires the plumber and the electrician and only pays them when the job is done right.
+
 ## Run it (60 seconds, no wallet needed)
 
 Requires Node.js 20 or newer.
